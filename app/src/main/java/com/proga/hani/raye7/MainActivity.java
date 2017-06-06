@@ -15,6 +15,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -57,6 +58,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     Geocoder geocoder;
     List<Address> addresses;
+    List<Route> publicRoutes;
+
+    ImageView replace;
 
     LinearLayout formLL;
 
@@ -64,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Button btnFindPath;
     private TextView etOrigin;
     private TextView etDestination;
+    private TextView tvDuration, tvDistance;
     private List<Marker> originMarkers = new ArrayList<>();
     private List<Marker> destinationMarkers = new ArrayList<>();
     private List<Polyline> polylinePaths = new ArrayList<>();
@@ -80,6 +85,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
         geocoder = new Geocoder(this, Locale.getDefault());
+
+        tvDistance = (TextView) findViewById(R.id.tvDistance);
+        tvDuration = (TextView) findViewById(R.id.tvDuration);
 
         btnFindPath = (Button) findViewById(R.id.btnFindPath);
         etOrigin = (TextView) findViewById(R.id.etOrigin);
@@ -115,6 +123,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 }
 
+            }
+        });
+
+        replace = (ImageView) findViewById(R.id.replace);
+        replace.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String to = etDestination.getText().toString();
+                etDestination.setText(etOrigin.getText().toString());
+                etOrigin.setText(to);
             }
         });
 
@@ -183,7 +201,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
                 etDestination.setText(address);
+                showFormLL();
 
+            }
+        });
+
+        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
+            @Override
+            public void onPolylineClick(Polyline polyline) {
+                polyline.setColor(Color.BLUE);
+                polyline.setWidth(18);
+                int x = 0;
+                for (Polyline line : polylinePaths) {
+                    if (line.getId().toString().equals(polyline.getId().toString())) {
+                        x++;
+                    } else {
+                        line.setColor(Color.GRAY);
+                        line.setWidth(10);
+                    }
+                }
+                tvDuration.setText(publicRoutes.get(x).duration.text);
+                tvDistance.setText(publicRoutes.get(x).distance.text);
 
             }
         });
@@ -272,8 +310,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         polylinePaths = new ArrayList<>();
         originMarkers = new ArrayList<>();
         destinationMarkers = new ArrayList<>();
+        publicRoutes = routes;
+        int x = 0;
 
         for (Route route : routes) {
+            x++;
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(route.startLocation, 12));
             ((TextView) findViewById(R.id.tvDuration)).setText(route.duration.text);
             ((TextView) findViewById(R.id.tvDistance)).setText(route.distance.text);
@@ -289,8 +330,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             PolylineOptions polylineOptions = new PolylineOptions().
                     geodesic(true).
-                    color(Color.BLUE).
-                    width(10);
+                    clickable(true);
+
+
+            if (x == 1) {
+                polylineOptions.
+                        color(Color.BLUE).
+                        width(18);
+            } else {
+                polylineOptions.
+                        color(Color.GRAY).
+                        width(10);
+
+            }
 
             for (int i = 0; i < route.points.size(); i++)
                 polylineOptions.add(route.points.get(i));
@@ -304,6 +356,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
 
+    //Get AutoComplete Google place
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == PLACE_AUTOCOMPLETE_REQUEST_CODE) {
