@@ -54,7 +54,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
 
     GPSTracker gps;
-    Boolean getOrigin, getDestination = false;
+    Boolean getOrigin = false;
+    Boolean getDestination = false;
 
     Geocoder geocoder;
     List<Address> addresses;
@@ -210,18 +211,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public void onPolylineClick(Polyline polyline) {
                 polyline.setColor(Color.BLUE);
-                polyline.setWidth(18);
-                int x = 0;
+                polyline.setWidth(25);
+                int routId = Integer.parseInt(polyline.getId().toString().substring(2));
+                tvDuration.setText(publicRoutes.get(routId).duration.text);
+                tvDistance.setText(publicRoutes.get(routId).distance.text);
+
                 for (Polyline line : polylinePaths) {
-                    if (line.getId().toString().equals(polyline.getId().toString())) {
-                        x++;
-                    } else {
+                    if (!line.getId().toString().equals(polyline.getId().toString())) {
                         line.setColor(Color.GRAY);
-                        line.setWidth(10);
+                        line.setWidth(15);
+
                     }
                 }
-                tvDuration.setText(publicRoutes.get(x).duration.text);
-                tvDistance.setText(publicRoutes.get(x).distance.text);
+
+
+                //Showing ETA on selected polyline
+                int s = publicRoutes.get(routId).points.size();
+                LatLng latLng = publicRoutes.get(routId).points.get((s / 2));
+                Marker m = mMap.addMarker(new MarkerOptions()
+                        .position(latLng)
+                        .title("ETA")
+                        .snippet(publicRoutes.get(routId).duration.text)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.invisible)));
+                m.showInfoWindow();
+
 
             }
         });
@@ -316,8 +329,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         for (Route route : routes) {
             x++;
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(route.startLocation, 12));
-            ((TextView) findViewById(R.id.tvDuration)).setText(route.duration.text);
-            ((TextView) findViewById(R.id.tvDistance)).setText(route.distance.text);
 
             originMarkers.add(mMap.addMarker(new MarkerOptions()
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.start_blue))
@@ -332,15 +343,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     geodesic(true).
                     clickable(true);
 
+            //Showing ETA on routes
+            int s = route.points.size();
+            LatLng latLng = route.points.get((s / 2));
+            Marker m = createMarker(latLng, route.duration.text);
+
+
+
 
             if (x == 1) {
                 polylineOptions.
                         color(Color.BLUE).
-                        width(18);
+                        width(25);
+                m.showInfoWindow();
+                tvDuration.setText(publicRoutes.get(0).duration.text);
+                tvDistance.setText(publicRoutes.get(0).distance.text);
+
             } else {
                 polylineOptions.
                         color(Color.GRAY).
-                        width(10);
+                        width(15);
 
             }
 
@@ -408,6 +430,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         formLL.setVisibility(View.GONE);
                     }
                 });
+    }
+
+
+    protected Marker createMarker(LatLng latLng, String snippet) {
+        return mMap.addMarker(new MarkerOptions()
+                .position(latLng)
+                .title("ETA")
+                .anchor(0.5f, 0.5f)
+                .snippet(snippet)
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.invisible)));
     }
 
 
