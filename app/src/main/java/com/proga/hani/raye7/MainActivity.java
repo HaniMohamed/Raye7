@@ -5,13 +5,17 @@ import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
@@ -66,6 +70,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     ImageView replace;
 
     LinearLayout formLL;
+
 
     private GoogleMap mMap;
     private Button btnFindPath;
@@ -175,19 +180,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
+        final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         gps = new GPSTracker(this);
-        if (gps.canGetLocation()) {
-
-            double latitude = gps.getLatitude();
-            double longitude = gps.getLongitude();
-            CameraPosition cameraPosition = new CameraPosition.Builder().target(
-                    new LatLng(latitude, longitude)).zoom(12).build();
-
-            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-
+        mMap = googleMap;
+        if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            getLocation();
         } else {
-            Toast.makeText(MainActivity.this, "Please Enable GPS..! ", Toast.LENGTH_SHORT).show();
+            buildAlertMessageNoGps();
         }
 
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
@@ -266,7 +265,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             @Override
             public boolean onMyLocationButtonClick() {
 
-                if (gps.canGetLocation()) {
+                if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    getLocation();
                     double latitude = gps.getLatitude();
                     double longitude = gps.getLongitude();
 
@@ -283,7 +283,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     showFormLL();
                 } else {
-                    Toast.makeText(MainActivity.this, "Please Enable GPS..! ", Toast.LENGTH_SHORT).show();
+                    buildAlertMessageNoGps();
                 }
 
                 return false;
@@ -304,6 +304,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setTrafficEnabled(true);
     }
 
+
+    public void getLocation() {
+        gps = new GPSTracker(this);
+        double latitude = gps.getLatitude();
+        double longitude = gps.getLongitude();
+        CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                new LatLng(latitude, longitude)).zoom(12).build();
+
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
+    }
 
     @Override
     public void onDirectionFinderStart() {
@@ -491,5 +502,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.invisible)));
     }
 
+
+    private void buildAlertMessageNoGps() {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Your GPS seems to be disabled, do you want to enable it?")
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        dialog.cancel();
+                    }
+                });
+        final AlertDialog alert = builder.create();
+        alert.show();
+    }
 
 }

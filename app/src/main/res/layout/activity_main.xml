@@ -131,20 +131,22 @@
         <ImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginLeft="30dp"
+            android:layout_marginLeft="15dp"
             android:layout_marginTop="5dp"
             android:src="@drawable/ic_distance"/>
         <TextView
             android:id="@+id/tvDistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="5dp"
+            android:background="@drawable/textview_back"
+            android:gravity="center"
+            android:padding="3dp"
             android:text="0 km" />
 
         <ImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginLeft="20dp"
+            android:layout_marginLeft="10dp"
             android:layout_marginTop="5dp"
             android:padding="5dp"
             android:src="@drawable/ic_clock"/>
@@ -152,7 +154,9 @@
             android:id="@+id/tvDuration"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="5dp"
+            android:background="@drawable/textview_back"
+            android:gravity="center"
+            android:padding="3dp"
             android:text="0 min" />
     </LinearLayout>
 </RelativeLayout>
