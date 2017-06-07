@@ -25,6 +25,7 @@ import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -32,6 +33,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
@@ -89,6 +91,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         tvDistance = (TextView) findViewById(R.id.tvDistance);
         tvDuration = (TextView) findViewById(R.id.tvDuration);
+        formLL = (LinearLayout) findViewById(R.id.form_LL);
+
 
         btnFindPath = (Button) findViewById(R.id.btnFindPath);
         etOrigin = (TextView) findViewById(R.id.etOrigin);
@@ -109,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
+
 
         etDestination = (TextView) findViewById(R.id.etDestination);
         etDestination.setOnClickListener(new View.OnClickListener() {
@@ -138,8 +143,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 etOrigin.setText(to);
             }
         });
-
-        formLL = (LinearLayout) findViewById(R.id.form_LL);
 
 
         btnFindPath.setOnClickListener(new View.OnClickListener() {
@@ -328,11 +331,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onDirectionFinderSuccess(List<Route> routes) {
+        mMap.clear();
         progressDialog.dismiss();
         polylinePaths = new ArrayList<>();
         originMarkers = new ArrayList<>();
         destinationMarkers = new ArrayList<>();
         publicRoutes = routes;
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+
         int x = 0;
 
         for (Route route : routes) {
@@ -358,6 +364,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             Marker m = createMarker(latLng, route.duration.text);
 
 
+            builder.include(route.startLocation);
+            builder.include(route.endLocation);
+
 
 
             if (x == 1) {
@@ -381,6 +390,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             polylinePaths.add(mMap.addPolyline(polylineOptions));
         }
 
+        //Moving camera to Fit the route
+        LatLngBounds bounds = builder.build();
+        int padding = 250; // offset from edges of the map in pixels
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, padding);
+        mMap.animateCamera(cu);
+
         hideFormLL();
 
 
@@ -396,8 +411,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (getOrigin) {
                     etOrigin.setText(place.getAddress());
 
+                    //draw marker and move camera to the place
+                    mMap.addMarker(new MarkerOptions()
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+                            .position(place.getLatLng()));
+
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                            new LatLng(place.getLatLng().latitude, place.getLatLng().longitude)).zoom(12).build();
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
+
+
                 } else if (getDestination) {
                     etDestination.setText(place.getAddress());
+
+                    //draw marker and move camera to the place
+                    mMap.addMarker(new MarkerOptions()
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                            .position(place.getLatLng()));
+
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                            new LatLng(place.getLatLng().latitude, place.getLatLng().longitude)).zoom(12).build();
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
+
 
                 }
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
@@ -408,12 +445,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 // The user canceled the operation.
             }
         }
+
         getOrigin = false;
         getDestination = false;
 
     }
 
-
+    // Show (From/To) Layout
     public void showFormLL() {
         formLL.animate()
                 .alpha(1.0f)
@@ -428,6 +466,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         formLL.setVisibility(View.VISIBLE);
     }
 
+    // Hide (From/To) Layout
     public void hideFormLL() {
 
         formLL.animate()
