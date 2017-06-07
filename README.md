@@ -19,4 +19,4 @@ Raye7 App helping you showing the destination path of your trip. Providing with 
 
 ## Alternative Routes: 
 
-   The application provides alternative routes of your trip with the ** estimated time of arrival ** on each route. So that you can select one of them.
+>   The application provides alternative routes of your trip with the estimated time of arrival on each route. So that you can select one of them.
