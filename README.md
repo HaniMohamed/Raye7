@@ -8,11 +8,11 @@ Raye7 App helping you showing the destination path of your trip. Providing with 
 <img src="https://github.com/HaniMohamed/Raye7/blob/master/device-2017-06-07-133018.png?raw=true" height="350"/>
 </p>
 
-You can select Origin and Destination addresses by two ways: 
+## Select Origin and Destination addresses: 
   1) Selection from map
   
-    -To select your current location as Origin address press current-location button on the map.
-    -To select destination address long press on the required place on the map.
+    - ** Origin address ** press current-location button on the map.
+    - ** Destination address ** long press on the required place on the map.
 
   2) Inserting Addresses manually helping with autocomplete provides by "google places".
 
