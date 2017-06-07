@@ -239,6 +239,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        //override marker Clicks
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                return false;
+            }
+        });
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
@@ -386,11 +393,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Place place = PlaceAutocomplete.getPlace(this, data);
                 if (getOrigin) {
                     etOrigin.setText(place.getAddress());
-                    getOrigin = false;
 
                 } else if (getDestination) {
                     etDestination.setText(place.getAddress());
-                    getDestination = false;
 
                 }
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
@@ -401,6 +406,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 // The user canceled the operation.
             }
         }
+        getOrigin = false;
+        getDestination = false;
+
     }
 
 
