@@ -16,4 +16,7 @@ Raye7 App helping you showing the destination path of your trip. Providing with 
 
   2) Inserting Addresses manually helping with autocomplete provides by "google places".
 
-The application provides alternative routes of your trip with the estimated time of arrival of each route. and you can select one of them.
+
+## Alternative Routes: 
+
+   The application provides alternative routes of your trip with the ** estimated time of arrival ** on each route. So that you can select one of them.
