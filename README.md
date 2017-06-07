@@ -9,3 +9,5 @@ Users can select Origin and Destination addresses by two ways:
     To select destination address long long press on the required address.
 
   2) Inserting Addresses manually helping with autocomplete provides by "google places".
+
+The application provides alternative routes of your trip with the estimated time of arrival of each route. and users can select one of them.
