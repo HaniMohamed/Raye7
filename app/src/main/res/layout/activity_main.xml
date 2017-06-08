@@ -53,16 +53,32 @@
                 android:text="From"
                 android:textStyle="bold"/>
 
-            <TextView
-                android:id="@+id/etOrigin"
+            <LinearLayout
                 android:layout_width="220dp"
                 android:layout_height="30dp"
                 android:layout_marginLeft="10dp"
                 android:background="@drawable/textview_back"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/etOrigin"
+                    android:layout_width="190dp"
+                    android:layout_height="30dp"
                 android:gravity="center_vertical"
                 android:hint="Origin address"
                 android:maxLines="5"
                 android:padding="5dp" />
+
+                <ImageView
+                    android:id="@+id/currentLoc"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:padding="3dp"
+                    android:src="@android:drawable/ic_menu_mylocation" />
+
+            </LinearLayout>
 
 
         </LinearLayout>

@@ -1,23 +1,27 @@
 package com.proga.hani.raye7;
 
 
-import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.DisplayMetrics;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -64,10 +68,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     Boolean getDestination = false;
 
     Geocoder geocoder;
-    List<Address> addresses;
-    List<Route> publicRoutes;
+    List<Address> addresses = new ArrayList<>();
 
-    ImageView replace;
+    ImageView replace, currentLoc;
 
     LinearLayout formLL;
 
@@ -80,11 +83,34 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private List<Marker> originMarkers = new ArrayList<>();
     private List<Marker> destinationMarkers = new ArrayList<>();
     private List<Polyline> polylinePaths = new ArrayList<>();
+    private List<Route> publicRoutes = new ArrayList<>();
     private ProgressDialog progressDialog;
+
+    // Convert a view to bitmap
+    public static Bitmap createDrawableFromView(Context context, View view) {
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        view.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        view.measure(displayMetrics.widthPixels, displayMetrics.heightPixels);
+        view.layout(0, 0, displayMetrics.widthPixels, displayMetrics.heightPixels);
+        view.buildDrawingCache();
+        Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(), view.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+
+        Canvas canvas = new Canvas(bitmap);
+        view.draw(canvas);
+
+        return bitmap;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.setLogo(R.mipmap.icon_launch);
+        actionBar.setDisplayUseLogoEnabled(true);
+        actionBar.setDisplayShowHomeEnabled(true);
+
         setContentView(R.layout.activity_main);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -149,6 +175,47 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         });
 
+        currentLoc = (ImageView) findViewById(R.id.currentLoc);
+        currentLoc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                gps = new GPSTracker(MainActivity.this);
+
+                if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    getLocation();
+                    double latitude = gps.getLatitude();
+                    double longitude = gps.getLongitude();
+
+                    try {
+                        addresses = geocoder.getFromLocation(latitude, longitude, 1);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    String address = addresses.get(0).getAddressLine(0) + "," + addresses.get(0).getAddressLine(1) + "," + addresses.get(0).getAddressLine(2) + "," + addresses.get(0).getAddressLine(3);
+                    etOrigin.setText(address);
+
+
+                    //draw marker and move camera to the place
+                    final LatLng latLng = new LatLng(latitude, longitude);
+                    mMap.addMarker(new MarkerOptions()
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+                            .position(latLng));
+
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                            new LatLng(latitude, longitude)).zoom(12).build();
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
+
+                    showFormLL();
+                } else {
+                    buildAlertMessageNoGps();
+                }
+
+            }
+        });
+
 
         btnFindPath.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -157,6 +224,95 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        gps = new GPSTracker(this);
+        mMap = googleMap;
+        if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            getLocation();
+        } else {
+            buildAlertMessageNoGps();
+        }
+
+
+        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng latLng) {
+
+                double lat = latLng.latitude;
+                double lng = latLng.longitude;
+
+                try {
+                    addresses = geocoder.getFromLocation(lat, lng, 1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                String address = addresses.get(0).getAddressLine(0) + "," + addresses.get(0).getAddressLine(1) + "," + addresses.get(0).getAddressLine(2) + "," + addresses.get(0).getAddressLine(3);
+                etDestination.setText(address);
+
+
+
+                showFormLL();
+
+            }
+        });
+
+        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
+            @Override
+            public void onPolylineClick(Polyline polyline) {
+                polyline.setColor(Color.BLUE);
+                polyline.setWidth(25);
+                int routId = Integer.parseInt(polyline.getId().toString().substring(2));
+
+                tvDuration.setText(publicRoutes.get(routId).duration.text);
+                tvDistance.setText(publicRoutes.get(routId).distance.text);
+
+                for (Polyline line : polylinePaths) {
+                    if (!line.getId().toString().equals(polyline.getId().toString())) {
+                        line.setColor(Color.GRAY);
+                        line.setWidth(15);
+                    }
+                }
+
+            }
+        });
+
+
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                if (formLL.getVisibility() == View.VISIBLE) {
+                    hideFormLL();
+                } else {
+                    showFormLL();
+                }
+            }
+        });
+
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                return true;
+            }
+        });
+
+
+        mMap.setTrafficEnabled(true);
+    }
+
+    public void getLocation() {
+        gps = new GPSTracker(this);
+        double latitude = gps.getLatitude();
+        double longitude = gps.getLongitude();
+        CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                new LatLng(latitude, longitude)).zoom(12).build();
+
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
     }
 
     private void sendRequest() {
@@ -176,144 +332,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        gps = new GPSTracker(this);
-        mMap = googleMap;
-        if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            getLocation();
-        } else {
-            buildAlertMessageNoGps();
-        }
-
-        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
-            @Override
-            public void onMapLongClick(LatLng latLng) {
-
-                double lat = latLng.latitude;
-                double lng = latLng.longitude;
-
-                try {
-                    addresses = geocoder.getFromLocation(lat, lng, 1);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                String address = addresses.get(0).getAddressLine(0) + "," + addresses.get(0).getAddressLine(1) + "," + addresses.get(0).getAddressLine(2) + "," + addresses.get(0).getAddressLine(3);
-
-
-                etDestination.setText(address);
-                showFormLL();
-
-            }
-        });
-
-        mMap.setOnPolylineClickListener(new GoogleMap.OnPolylineClickListener() {
-            @Override
-            public void onPolylineClick(Polyline polyline) {
-                polyline.setColor(Color.BLUE);
-                polyline.setWidth(25);
-                int routId = Integer.parseInt(polyline.getId().toString().substring(2));
-                tvDuration.setText(publicRoutes.get(routId).duration.text);
-                tvDistance.setText(publicRoutes.get(routId).distance.text);
-
-                for (Polyline line : polylinePaths) {
-                    if (!line.getId().toString().equals(polyline.getId().toString())) {
-                        line.setColor(Color.GRAY);
-                        line.setWidth(15);
-
-                    }
-                }
-
-
-                //Showing ETA on selected polyline
-                int s = publicRoutes.get(routId).points.size();
-                LatLng latLng = publicRoutes.get(routId).points.get((s / 2));
-                Marker m = mMap.addMarker(new MarkerOptions()
-                        .position(latLng)
-                        .title("ETA")
-                        .snippet(publicRoutes.get(routId).duration.text)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.invisible)));
-                m.showInfoWindow();
-
-
-            }
-        });
-
-        //override marker Clicks
-        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
-            @Override
-            public boolean onMarkerClick(Marker marker) {
-                return false;
-            }
-        });
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng latLng) {
-                if (formLL.getVisibility() == View.VISIBLE) {
-                    hideFormLL();
-                } else {
-                    showFormLL();
-                }
-            }
-        });
-
-        mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
-            @Override
-            public boolean onMyLocationButtonClick() {
-
-                if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    getLocation();
-                    double latitude = gps.getLatitude();
-                    double longitude = gps.getLongitude();
-
-                    try {
-                        addresses = geocoder.getFromLocation(latitude, longitude, 1);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-                    String address = addresses.get(0).getAddressLine(0) + "," + addresses.get(0).getAddressLine(1) + "," + addresses.get(0).getAddressLine(2) + "," + addresses.get(0).getAddressLine(3);
-
-
-                    etOrigin.setText(address);
-
-                    showFormLL();
-                } else {
-                    buildAlertMessageNoGps();
-                }
-
-                return false;
-            }
-        });
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-        mMap.setMyLocationEnabled(true);
-        mMap.setTrafficEnabled(true);
-    }
-
-
-    public void getLocation() {
-        gps = new GPSTracker(this);
-        double latitude = gps.getLatitude();
-        double longitude = gps.getLongitude();
-        CameraPosition cameraPosition = new CameraPosition.Builder().target(
-                new LatLng(latitude, longitude)).zoom(12).build();
-
-        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-
     }
 
     @Override
@@ -347,7 +365,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         polylinePaths = new ArrayList<>();
         originMarkers = new ArrayList<>();
         destinationMarkers = new ArrayList<>();
-        publicRoutes = routes;
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
 
         int x = 0;
@@ -357,13 +374,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(route.startLocation, 12));
 
             originMarkers.add(mMap.addMarker(new MarkerOptions()
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.start_blue))
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
                     .title(route.startAddress)
                     .position(route.startLocation)));
             destinationMarkers.add(mMap.addMarker(new MarkerOptions()
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.end_green))
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
                     .title(route.endAddress)
                     .position(route.endLocation)));
+
+
+            publicRoutes.add(route);
 
             PolylineOptions polylineOptions = new PolylineOptions().
                     geodesic(true).
@@ -412,7 +432,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
-
     //Get AutoComplete Google place
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -424,7 +443,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                     //draw marker and move camera to the place
                     mMap.addMarker(new MarkerOptions()
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
                             .position(place.getLatLng()));
 
                     CameraPosition cameraPosition = new CameraPosition.Builder().target(
@@ -492,16 +511,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
     }
 
-
     protected Marker createMarker(LatLng latLng, String snippet) {
+
+        View marker = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.custom_marker, null);
+        TextView numTxt = (TextView) marker.findViewById(R.id.tvETA);
+        numTxt.setText(snippet);
+
+
         return mMap.addMarker(new MarkerOptions()
                 .position(latLng)
-                .title("ETA")
-                .anchor(0.5f, 0.5f)
-                .snippet(snippet)
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.invisible)));
+                .icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(this, marker))));
     }
-
 
     private void buildAlertMessageNoGps() {
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
