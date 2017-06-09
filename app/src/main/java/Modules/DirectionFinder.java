@@ -20,8 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Mai Thanh Hiep on 4/3/2016.
+ * Created by hani on 6/7/17.
  */
+
 public class DirectionFinder {
     private static final String DIRECTION_URL_API = "https://maps.googleapis.com/maps/api/directions/json?";
     private static final String GOOGLE_API_KEY = "AIzaSyCMCVkAn541MFAY5XyqD4ZuZzIO1wX3uTM";

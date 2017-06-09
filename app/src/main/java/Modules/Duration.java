@@ -1,8 +1,9 @@
 package Modules;
 
 /**
- * Created by Mai Thanh Hiep on 4/3/2016.
+ * Created by hani on 6/7/17.
  */
+
 public class Duration {
     public String text;
     public int value;
