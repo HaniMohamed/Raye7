@@ -8,6 +8,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -15,10 +16,13 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -73,6 +77,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     ImageView replace, currentLoc;
 
     LinearLayout formLL;
+
+    int i=1;
 
 
     private GoogleMap mMap;
@@ -180,40 +186,44 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         currentLoc.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-                gps = new GPSTracker(MainActivity.this);
+                if (ActivityCompat.checkSelfPermission(getApplication(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplication(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    checkPermission(android.Manifest.permission.ACCESS_FINE_LOCATION);
+                    checkPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION);
+                } else {
 
-                if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    getLocation();
-                    double latitude = gps.getLatitude();
-                    double longitude = gps.getLongitude();
+                    final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                    gps = new GPSTracker(MainActivity.this);
 
-                    try {
-                        addresses = geocoder.getFromLocation(latitude, longitude, 1);
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                        getLocation();
+                        double latitude = gps.getLatitude();
+                        double longitude = gps.getLongitude();
+
+                        try {
+                            addresses = geocoder.getFromLocation(latitude, longitude, 1);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        String address = addresses.get(0).getAddressLine(0) + "," + addresses.get(0).getAddressLine(1) + "," + addresses.get(0).getAddressLine(2) + "," + addresses.get(0).getAddressLine(3);
+                        etOrigin.setText(address);
+
+
+                        //draw marker and move camera to the place
+                        final LatLng latLng = new LatLng(latitude, longitude);
+                        mMap.addMarker(new MarkerOptions()
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
+                                .position(latLng));
+
+                        CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                                new LatLng(latitude, longitude)).zoom(12).build();
+                        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
+
+                        showFormLL();
                     }
 
-                    String address = addresses.get(0).getAddressLine(0) + "," + addresses.get(0).getAddressLine(1) + "," + addresses.get(0).getAddressLine(2) + "," + addresses.get(0).getAddressLine(3);
-                    etOrigin.setText(address);
-
-
-                    //draw marker and move camera to the place
-                    final LatLng latLng = new LatLng(latitude, longitude);
-                    mMap.addMarker(new MarkerOptions()
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
-                            .position(latLng));
-
-                    CameraPosition cameraPosition = new CameraPosition.Builder().target(
-                            new LatLng(latitude, longitude)).zoom(12).build();
-                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-
-
-                    showFormLL();
-                } else {
-                    buildAlertMessageNoGps();
                 }
-
             }
         });
 
@@ -232,11 +242,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         gps = new GPSTracker(this);
         mMap = googleMap;
-        if (manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            getLocation();
-        } else {
-            buildAlertMessageNoGps();
+        getLocation();
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            checkPermission(android.Manifest.permission.ACCESS_FINE_LOCATION);
+            checkPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION);
+            return;
+        }else{
+
+            mMap.setMyLocationEnabled(true);
         }
+
 
 
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
@@ -306,14 +322,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void getLocation() {
-        gps = new GPSTracker(this);
-        double latitude = gps.getLatitude();
-        double longitude = gps.getLongitude();
-        CameraPosition cameraPosition = new CameraPosition.Builder().target(
-                new LatLng(latitude, longitude)).zoom(12).build();
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            checkPermission(android.Manifest.permission.ACCESS_FINE_LOCATION);
+            checkPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION);
+            return;
+        }else {
+            gps = new GPSTracker(this);
+            double latitude = gps.getLatitude();
+            double longitude = gps.getLongitude();
+            CameraPosition cameraPosition = new CameraPosition.Builder().target(
+                    new LatLng(latitude, longitude)).zoom(12).build();
 
-        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-
+            mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        }
     }
 
     private void sendRequest() {
@@ -524,22 +545,44 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .icon(BitmapDescriptorFactory.fromBitmap(createDrawableFromView(this, marker))));
     }
 
-    private void buildAlertMessageNoGps() {
-        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("Your GPS seems to be disabled, do you want to enable it?")
-                .setCancelable(false)
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                        startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-                    }
-                })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                    public void onClick(final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
-                        dialog.cancel();
-                    }
-                });
-        final AlertDialog alert = builder.create();
-        alert.show();
+    public boolean checkPermission(String permission) {
+
+// Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(MainActivity.this, permission)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{permission},
+                    i);
+
+            // Permission is not granted
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                    permission)) {
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+            } else {
+                // No explanation needed; request the permission
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{permission},
+                        i);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        } else {
+            // Permission has already been granted
+        }
+
+        Boolean permissionStatus = MainActivity.this.checkCallingOrSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
+
+
+        i++;
+        return permissionStatus;
     }
+
+
 
 }
